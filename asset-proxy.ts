@@ -1,5 +1,5 @@
 import "./worker-types.ts";
-import { FetchEventResponder } from "./domain-types.ts";
+import { FetchEventResponder } from "./handler.ts";
 
 /**
  * Proxy request to another host, but only considering url

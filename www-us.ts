@@ -1,7 +1,10 @@
 import "./worker-types.ts";
-import redirects from "./redirects.json";
-import { getEventHandler } from "./handler.ts";
+import { getEventListener } from "./handler.ts";
 import { fetchFromHost } from "./asset-proxy.ts";
+import { getRedirecter } from "./redirecter.ts";
+import type { Redirect } from "./redirecter.ts";
+
+declare const __REDIRECTS: Redirect[];
 
 const ttlOneDay = 1 * 60 * 60 * 24;
 
@@ -13,17 +16,10 @@ const MIME_TYPE_TO_TTL_MAP = {
   "application/javascript": ttlOneDay,
 };
 
-const eventHandler = getEventHandler({
+const eventListener = getEventListener({
   getAsset: fetchFromHost("reima-us.netlify.app"),
-  getRedirect: getRedirectGetter(redirects),
-}, {
+  getRedirect: getRedirecter(__REDIRECTS),
   stripTrailingSlash: true,
 });
 
-addEventListener("fetch", (event) => {
-  try {
-    event.respondWith(eventHandler(event));
-  } catch (e) {
-    event.respondWith(new Response("Internal Error", { status: 500 }));
-  }
-});
+addEventListener("fetch", eventListener);
