@@ -1,11 +1,11 @@
 import "./worker-types.ts";
-import { FetchEventResponder } from "./handler.ts";
+import { RequestHandler } from "./handler.ts";
 
 /**
  * Proxy request to another host, but only considering url
  */
-export const fetchFromHost = (hostname: string): FetchEventResponder =>
-  async ({ request }) => {
+export const fetchFromHost = (hostname: string): RequestHandler =>
+  async (request) => {
     // get url
     const url = new URL(request.url);
     // change host to new hostname
