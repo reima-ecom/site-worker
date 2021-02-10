@@ -1,8 +1,10 @@
 import "./worker-types.ts";
-import { getEventListener } from "./handler.ts";
-import { fetchFromHost } from "./asset-proxy.ts";
-import { getRedirecter } from "./redirecter.ts";
-import type { Redirect } from "./redirecter.ts";
+import {
+  fetchFromHost,
+  getEventListener,
+  getRedirecter,
+  Redirect,
+} from "./mod.ts";
 
 declare const __REDIRECTS: Redirect[];
 
