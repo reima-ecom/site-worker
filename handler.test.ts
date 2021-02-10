@@ -16,16 +16,24 @@ Deno.test("Returns response from asset getter", async () => {
   assertEquals(await resp.text(), "moikka");
 });
 
-const redirectMacro = (path: string, expectedLocation: string) =>
+const redirectMacro = (
+  path: string,
+  expectedLocation: string,
+  stripTrailingSlash?: boolean,
+) =>
   async () => {
     const redirects: Redirect[] = [
       { from: "/blackfriday", to: "/coll/bf" },
       { from: "/blackfriday/", to: "/coll/bf" },
     ];
     const handleEvent = _getEventHandler({
-      getAsset: async () => undefined,
+      getAsset: async (event) => {
+        const path = new URL(event.request.url).pathname;
+        if (path.startsWith("/blackfriday")) return;
+        return new Response("usually we respond");
+      },
       getRedirect: getRedirecter(redirects),
-      stripTrailingSlash: true,
+      stripTrailingSlash,
     });
     const resp = await handleEvent(makeFetchEvent(path));
     assertEquals(resp.headers.get("location"), expectedLocation);
@@ -33,24 +41,25 @@ const redirectMacro = (path: string, expectedLocation: string) =>
   };
 
 Deno.test(
-  "Redirects to non-trailing slash if option set",
-  redirectMacro("/prod/jacket/", "/prod/jacket"),
+  "redirects to non-trailing slash if option set",
+  redirectMacro("/prod/jacket/", "/prod/jacket", true),
 );
 Deno.test(
-  "Redirects to non-trailing with query string",
-  redirectMacro("/prod/jacket/?hello=there", "/prod/jacket?hello=there"),
+  "redirects to non-trailing with query string",
+  redirectMacro("/prod/jacket/?hello=there", "/prod/jacket?hello=there", true),
 );
 Deno.test(
-  "Redirects regular query string",
-  redirectMacro("/blackfriday/?hello=there", "/coll/bf?hello=there"),
+  "redirects non-trailing slash only once (flattens redirects)",
+  redirectMacro("/blackfriday/", "/coll/bf", true),
 );
+
 Deno.test(
-  "Redirects with getter",
+  "regular redirect with getter",
   redirectMacro("/blackfriday", "/coll/bf"),
 );
 Deno.test(
-  "Redirects trailing slash only once",
-  redirectMacro("/blackfriday/", "/coll/bf"),
+  "regular redirect with query string",
+  redirectMacro("/blackfriday/?hello=there", "/coll/bf?hello=there"),
 );
 
 Deno.test("Does not redirect root", async () => {
