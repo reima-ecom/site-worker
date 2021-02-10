@@ -8,7 +8,7 @@ export type RedirectFinder = (
 ) => Promise<RedirectResult | undefined>;
 
 export type RedirectHandler = (
-  event: FetchEvent,
+  request: Request,
 ) => Promise<Response | undefined>;
 
 export type Redirect = {
@@ -76,14 +76,14 @@ const _toResponse = (request: Request) =>
       })
       : undefined;
 
-const _getPathname = (event: FetchEvent): string =>
-  new URL(event.request.url).pathname;
+const _getPathname = (request: Request): string =>
+  new URL(request.url).pathname;
 
 export const getRedirecter = (redirects: Redirect[]): RedirectHandler => {
   const getRedirect = _getWildcardRedirectFinder(_getRedirectGetter(redirects));
-  return (event) =>
-    Promise.resolve(event)
+  return (request) =>
+    Promise.resolve(request)
       .then(_getPathname)
       .then(getRedirect)
-      .then(_toResponse(event.request));
+      .then(_toResponse(request));
 };

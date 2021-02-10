@@ -27,8 +27,8 @@ const redirectMacro = (
       { from: "/blackfriday/", to: "/coll/bf" },
     ];
     const handleEvent = _getEventHandler({
-      getAsset: async (event) => {
-        const path = new URL(event.request.url).pathname;
+      getAsset: async (req) => {
+        const path = new URL(req.url).pathname;
         if (path.startsWith("/blackfriday")) return;
         return new Response("usually we respond");
       },
@@ -52,6 +52,15 @@ Deno.test(
   "redirects non-trailing slash only once (flattens redirects)",
   redirectMacro("/blackfriday/", "/coll/bf", true),
 );
+Deno.test("non-trailing slash doesn't redirect root", async () => {
+  const handleEvent = _getEventHandler({
+    getAsset: async () => new Response("root"),
+    getRedirect: async () => undefined,
+    stripTrailingSlash: true,
+  });
+  const resp = await handleEvent(makeFetchEvent());
+  assertEquals(await resp.text(), "root");
+});
 
 Deno.test(
   "regular redirect with getter",
@@ -62,12 +71,23 @@ Deno.test(
   redirectMacro("/blackfriday/?hello=there", "/coll/bf?hello=there"),
 );
 
-Deno.test("Does not redirect root", async () => {
+Deno.test("returns 404 html page", async () => {
   const handleEvent = _getEventHandler({
-    getAsset: async () => new Response("root"),
+    getAsset: async (req) =>
+      req.url.endsWith("/404.html")
+        ? new Response("404 html page")
+        : undefined,
     getRedirect: async () => undefined,
-    stripTrailingSlash: true,
   });
-  const resp = await handleEvent(makeFetchEvent());
-  assertEquals(await resp.text(), "root");
+  const resp = await handleEvent(makeFetchEvent("/non-existing"));
+  assertEquals(await resp.text(), "404 html page");
+});
+
+Deno.test("returns 404 status if html failed", async () => {
+  const handleEvent = _getEventHandler({
+    getAsset: async () => undefined,
+    getRedirect: async () => undefined,
+  });
+  const resp = await handleEvent(makeFetchEvent("/non-existing"));
+  assertEquals(resp.status, 404);
 });

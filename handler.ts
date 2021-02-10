@@ -3,8 +3,8 @@ import "./worker-types.ts";
 
 export type FetchEventListener = (event: FetchEvent) => void;
 
-export type FetchEventResponder = (
-  event: FetchEvent,
+export type RequestHandler = (
+  request: Request,
 ) => Promise<Response | undefined>;
 
 type FetchEventHandler = (
@@ -12,7 +12,7 @@ type FetchEventHandler = (
 ) => Promise<Response>;
 
 type EventHandlerOptions = {
-  getAsset: FetchEventResponder;
+  getAsset: RequestHandler;
   getRedirect: RedirectHandler;
   stripTrailingSlash?: boolean;
 };
@@ -24,20 +24,20 @@ const _hasTrailingSlashAndNotRoot = (url: string) => {
 };
 
 const _passthroughIfTrailingSlash = async (
-  getAsset: FetchEventResponder,
-  event: FetchEvent,
+  getAsset: RequestHandler,
+  request: Request,
 ): Promise<Response | undefined> => {
-  if (_hasTrailingSlashAndNotRoot(event.request.url)) {
+  if (_hasTrailingSlashAndNotRoot(request.url)) {
     return undefined;
   }
-  return getAsset(event);
+  return getAsset(request);
 };
 
 const _redirectIfTrailingSlash = async (
-  event: FetchEvent,
+  request: Request,
 ): Promise<Response | undefined> => {
-  if (_hasTrailingSlashAndNotRoot(event.request.url)) {
-    const url = new URL(event.request.url);
+  if (_hasTrailingSlashAndNotRoot(request.url)) {
+    const url = new URL(request.url);
     return new Response(
       "This site does not use trailing slashes for directories",
       {
@@ -50,21 +50,32 @@ const _redirectIfTrailingSlash = async (
   }
 };
 
+const _changeRequestUrlPath = (urlPath: string) =>
+  (request: Request): Request => {
+    const url = new URL(request.url);
+    url.pathname = urlPath;
+    return new Request(url.toString());
+  };
+
 export const _getEventHandler: (
   opts: EventHandlerOptions,
 ) => FetchEventHandler = (
   { getAsset, getRedirect, stripTrailingSlash },
 ) =>
-  async (event) =>
+  async ({ request }) =>
     // - return asset response (with correct trailing slash) OR
     await (stripTrailingSlash
-      ? _passthroughIfTrailingSlash(getAsset, event)
-      : getAsset(event)) ||
+      ? _passthroughIfTrailingSlash(getAsset, request)
+      : getAsset(request)) ||
     // - find and return redirect response OR
-    await getRedirect(event) ||
+    await getRedirect(request) ||
     // - redirect based on trailing slash OR
-    await (stripTrailingSlash ? _redirectIfTrailingSlash(event) : undefined) ||
+    await (stripTrailingSlash ? _redirectIfTrailingSlash(request)
+    : undefined) ||
     // - return styled 404
+    await Promise.resolve(request)
+      .then(_changeRequestUrlPath("/404.html"))
+      .then(getAsset) ||
     // - return hard 404
     new Response("Not found", { status: 404 });
 
