@@ -37,7 +37,7 @@ However, the example uses an external JSON file as its redirects array. This JSO
 # create the initial bundle
 > deno bundle sw.ts sw.js
 # add the redirects variable
-> deno run -A
+> deno run -A bundle-redirects-json.ts
 # publish with wrangler
 > wrangler publish
 ```

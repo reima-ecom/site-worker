@@ -15,5 +15,7 @@ export const fetchFromHost = (hostname: string): RequestHandler =>
     const lastPathSegment = url.pathname.split("/").pop();
     if (lastPathSegment && !lastPathSegment.includes(".")) url.pathname += "/";
     // fetch without headers or anything else from the original request
-    return fetch(url.toString());
+    const response = await fetch(url.toString());
+    // return response only if ok
+    if (response.ok) return response;
   };
