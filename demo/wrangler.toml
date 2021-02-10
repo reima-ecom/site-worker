@@ -1,0 +1,4 @@
+name = "test-site-worker"
+type = "javascript"
+account_id = "25fd4a605fa32029740e7374ebb26cab"
+workers_dev = true

@@ -1,10 +1,10 @@
-import "./worker-types.ts";
+import "../worker-types.ts";
 import {
   fetchFromHost,
   getEventListener,
   getRedirecter,
   Redirect,
-} from "./mod.ts";
+} from "../mod.ts";
 
 declare const __REDIRECTS: Redirect[];
 

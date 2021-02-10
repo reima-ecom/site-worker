@@ -35,14 +35,17 @@ const getEventListener = (opts)=>{
         event.respondWith(handleEvent(event));
     };
 };
+const getEventListener1 = getEventListener;
 const fetchFromHost = (hostname)=>async (request)=>{
         const url = new URL(request.url);
         url.hostname = hostname;
         const lastPathSegment = url.pathname.split("/").pop();
         if (lastPathSegment && !lastPathSegment.includes(".")) url.pathname += "/";
-        return fetch(url.toString());
+        const response = await fetch(url.toString());
+        if (response.ok) return response;
     }
 ;
+const fetchFromHost1 = fetchFromHost;
 const _getRedirectGetter = (redirectsArray)=>async (path)=>{
         const redirect = redirectsArray.find((r)=>r.from === path
         );
@@ -80,9 +83,10 @@ const getRedirecter = (redirects)=>{
     return (request)=>Promise.resolve(request).then(_getPathname).then(getRedirect).then(_toResponse(request))
     ;
 };
-const eventListener = getEventListener({
-    getAsset: fetchFromHost("reima-us.netlify.app"),
-    getRedirect: getRedirecter(__REDIRECTS),
+const getRedirecter1 = getRedirecter;
+const eventListener = getEventListener1({
+    getAsset: fetchFromHost1("reima-us.netlify.app"),
+    getRedirect: getRedirecter1(__REDIRECTS),
     stripTrailingSlash: true
 });
 addEventListener("fetch", eventListener);
