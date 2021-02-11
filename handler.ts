@@ -1,3 +1,4 @@
+import { rewriteForTesting } from "./ab-test-rewriter.ts";
 import { RedirectHandler } from "./redirecter.ts";
 import "./worker-types.ts";
 
@@ -13,7 +14,8 @@ type FetchEventHandler = (
 
 type EventHandlerOptions = {
   getAsset: RequestHandler;
-  getRedirect: RedirectHandler;
+  getRedirect?: RedirectHandler;
+  enableExperiments?: string[];
   stripTrailingSlash?: boolean;
 };
 
@@ -68,9 +70,9 @@ export const _getEventHandler: (
       ? _passthroughIfTrailingSlash(getAsset, request)
       : getAsset(request)) ||
     // - find and return redirect response OR
-    await getRedirect(request) ||
+    (getRedirect ? await getRedirect(request) : undefined) ||
     // - redirect based on trailing slash OR
-    await (stripTrailingSlash ? _redirectIfTrailingSlash(request)
+    (stripTrailingSlash ? await _redirectIfTrailingSlash(request)
     : undefined) ||
     // - return styled 404
     await Promise.resolve(request)
@@ -81,9 +83,17 @@ export const _getEventHandler: (
 
 export const getEventListener: (
   opts: EventHandlerOptions,
-) => FetchEventListener = (opts) => {
-  const handleEvent = _getEventHandler(opts);
-  return (event) => {
+) => FetchEventListener = (optionsInput) =>
+  (event) => {
+    const options = { ...optionsInput };
+    // wrap opts.getAsset here in case we have ab tests
+    if (optionsInput.enableExperiments) {
+      options.getAsset = rewriteForTesting(
+        optionsInput.enableExperiments,
+        optionsInput.getAsset,
+        event,
+      );
+    }
+    const handleEvent = _getEventHandler(options);
     event.respondWith(handleEvent(event));
   };
-};
