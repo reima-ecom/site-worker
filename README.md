@@ -2,7 +2,7 @@
 
 Cloudflare worker for handling requests for file assets. Supports assets stored under a different hostname and assets stored in Cloudflare Worker KV store.
 
-## Usage
+## Basic usage
 
 ```ts
 // sw.ts
@@ -41,3 +41,37 @@ However, the example uses an external JSON file as its redirects array. This JSO
 # publish with wrangler
 > wrangler publish
 ```
+
+## A/B testing
+
+You can A/B test with this event listener as well. Just pass in an array of strings with the `enableExperiments` parameter.
+
+```ts
+const eventListener = getEventListener({
+  getAsset: fetcher,
+  enableExperiments: ["exp-new-banner"],
+});
+```
+
+### How it works
+
+With the above experiment, the experimentation logic will set the `exp-new-banner` element attribute either to `treatment` or `control` where this attribute is found. Assuming a user in the treatment group, this is how a response from the `getAsset` function will be transformed:
+
+```html
+<!-- This html here -->
+<p exp-new-banner>This element will be tested</p>
+<!-- will be translated into -->
+<p exp-new-banner="treatment">This element will be tested</p>
+```
+
+This means that for the element you want to test, just set an attribute that has the same name as your experiment. The name of the experiment will also be the name of the cookie. Thus, it is advisable to prefix your experiment names with e.g. `exp-`.
+
+Then, in order to show the actual variants, just use a CSS attribute selector:
+
+```css
+[exp-new-banner=treatment] {
+  color: red;
+}
+```
+
+Naturally, the user id and experiment variation are persisted as cookies. **Note that persisting this user id (used only for experimentation) may have privacy implications.**
