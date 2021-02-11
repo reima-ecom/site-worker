@@ -1,3 +1,4 @@
+import { sendToElastic } from "./ab-test-elastic.ts";
 import { getCookies, setCookie, uuid } from "./deps.ts";
 import { RequestHandler } from "./handler.ts";
 import "./worker-cloudflare-types.ts";
@@ -200,14 +201,6 @@ export const _addExperimentCookies = (
   return results;
 };
 
-export const logExperimentHits: ExperimentHitSender = async (
-  userId,
-  experiments,
-) => {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  console.log(userId, "saw the following experiments:", experiments);
-};
-
 export const rewriteForTesting = (
   experiments: string[],
   getAsset: RequestHandler,
@@ -222,7 +215,7 @@ export const rewriteForTesting = (
       // get the user id from request
       .then(_addUserId(request))
       // transform asset response using htmlrewriter, writing to executedExperiments
-      .then(_transformForTesting(new HTMLRewriter(), logExperimentHits, event))
+      .then(_transformForTesting(new HTMLRewriter(), sendToElastic, event))
       // add experiment cookies
       .then(_addExperimentCookies)
       // add user id cookie

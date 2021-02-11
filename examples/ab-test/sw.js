@@ -1,3 +1,25 @@
+const toElasticBulk = (userId, experiments)=>experiments.filter((exp)=>exp.executed
+    ).map((exp)=>({
+            userId: userId,
+            experiment: exp.name,
+            variation: exp.variation,
+            timestamp: new Date()
+        })
+    ).map((exp)=>`{"index":{}}\n${JSON.stringify(exp)}\n`
+    ).join("")
+;
+const sendToElastic = async (userId, experiments)=>{
+    const resp = await fetch("https://21ca8fec9bcd4a7ba46d584c59d76fa0.eastus2.azure.elastic-cloud.com:9243/experiments/_bulk", {
+        method: "POST",
+        body: toElasticBulk(userId, experiments),
+        headers: {
+            "Content-Type": "application/x-ndjson",
+            Authorization: `ApiKey ${ELASTIC_APIKEY_BASE64}`
+        }
+    });
+    console.log(resp.status, resp.statusText);
+    console.log(await resp.json());
+};
 class Tokenizer {
     constructor(rules = []){
         this.rules = rules;
@@ -1341,13 +1363,8 @@ const _addExperimentCookies = (results)=>{
     }
     return results;
 };
-const logExperimentHits = async (userId1, experiments1)=>{
-    await new Promise((resolve)=>setTimeout(resolve, 500)
-    );
-    console.log(userId1, "saw the following experiments:", experiments1);
-};
 const rewriteForTesting = (experiments1, getAsset, event1)=>(request)=>Promise.resolve({
-        }).then(_addAssetResponse(getAsset, request)).then(_addExperimentVariations(experiments1, request)).then(_addUserId(request)).then(_transformForTesting(new HTMLRewriter(), logExperimentHits, event1)).then(_addExperimentCookies).then(_addUserCookie).then(({ response  })=>response
+        }).then(_addAssetResponse(getAsset, request)).then(_addExperimentVariations(experiments1, request)).then(_addUserId(request)).then(_transformForTesting(new HTMLRewriter(), sendToElastic, event1)).then(_addExperimentCookies).then(_addUserCookie).then(({ response  })=>response
         )
 ;
 const rewriteForTesting1 = rewriteForTesting;
@@ -1442,7 +1459,9 @@ const getRedirecter = (redirects)=>{
 const eventListener = getEventListener1({
     getAsset: async (request)=>{
         if (request.url.endsWith("/not-found")) return undefined;
-        if (request.url.endsWith("/404.html")) return new Response('This is a not found page');
+        if (request.url.endsWith("/404.html")) {
+            return new Response("This is a not found page");
+        }
         return new Response("<p exp-test>This should be tested</p>", {
             headers: {
                 "Content-Type": "text/html"
