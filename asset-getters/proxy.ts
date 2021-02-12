@@ -1,11 +1,11 @@
-import "./worker-types.ts";
-import { RequestHandler } from "./handler.ts";
+import "../worker-types.ts";
+import { FetchEventHandler } from "../handler.ts";
 
 /**
  * Proxy request to another host, but only considering url
  */
-export const fetchFromHost = (hostname: string): RequestHandler =>
-  async (request) => {
+export const fetchFromHost = (hostname: string): FetchEventHandler =>
+  async ({ request }) => {
     // get url
     const url = new URL(request.url);
     // change host to new hostname
@@ -15,7 +15,5 @@ export const fetchFromHost = (hostname: string): RequestHandler =>
     const lastPathSegment = url.pathname.split("/").pop();
     if (lastPathSegment && !lastPathSegment.includes(".")) url.pathname += "/";
     // fetch without headers or anything else from the original request
-    const response = await fetch(url.toString());
-    // return response only if ok
-    if (response.ok) return response;
+    return fetch(url.toString());
   };

@@ -1,4 +1,4 @@
-import type { ExperimentHitSender, Experiments } from "./ab-test-rewriter.ts";
+import type { ExperimentHitSender, Experiments } from "./ab-tester.ts";
 
 declare const ELASTIC_APIKEY_BASE64: string;
 

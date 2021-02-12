@@ -10,8 +10,9 @@ declare const __REDIRECTS: Redirect[];
 
 const eventListener = getEventListener({
   getAsset: fetchFromHost("reima-us.netlify.app"),
-  getRedirect: getRedirecter(__REDIRECTS),
-  stripTrailingSlash: true,
+  responseTransformers: [
+    getRedirecter(__REDIRECTS),
+  ],
 });
 
 addEventListener("fetch", eventListener);

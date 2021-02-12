@@ -1,3 +1,5 @@
+import { ResponseTransformer } from "../handler.ts";
+
 export type RedirectResult = {
   toPath: string;
   statusCode: 301 | 302 | undefined;
@@ -6,10 +8,6 @@ export type RedirectResult = {
 export type RedirectFinder = (
   pathname: string,
 ) => Promise<RedirectResult | undefined>;
-
-export type RedirectHandler = (
-  request: Request,
-) => Promise<Response | undefined>;
 
 export type Redirect = {
   from: string;
@@ -79,11 +77,13 @@ const _toResponse = (request: Request) =>
 const _getPathname = (request: Request): string =>
   new URL(request.url).pathname;
 
-export const getRedirecter = (redirects: Redirect[]): RedirectHandler => {
+export const getRedirecter = (redirects: Redirect[]): ResponseTransformer => {
   const getRedirect = _getWildcardRedirectFinder(_getRedirectGetter(redirects));
-  return (request) =>
-    Promise.resolve(request)
-      .then(_getPathname)
-      .then(getRedirect)
-      .then(_toResponse(request));
+  return ({ request }, response) =>
+    response.status === 404
+      ? Promise.resolve(request)
+        .then(_getPathname)
+        .then(getRedirect)
+        .then(_toResponse(request))
+      : Promise.resolve(undefined);
 };

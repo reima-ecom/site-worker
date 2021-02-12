@@ -1,20 +1,24 @@
 import { assertEquals } from "https://deno.land/std@0.86.0/testing/asserts.ts";
-import { _getWildcardRedirectFinder } from "./redirecter.ts";
+import { getRedirecter } from "./redirecter.ts";
+
+const makeFetchEvent = (path: string) =>
+  ({
+    request: new Request(`http://test.com${path}`),
+  }) as FetchEvent;
 
 const redirectMacro = (pathname: string, redirectTo: string | undefined) => {
-  const getRedirect = _getWildcardRedirectFinder(async (key) => {
-    if (!key) throw new Error("No key specified!");
-    //@ts-ignore
-    return ({
-      "/blackfriday": "/bf",
-      "/slash/": "/s",
-      "/coll/babies/*": "/coll/babies",
-      "/coll/junior/*": "/coll/kids",
-    }[key] || null);
-  });
+  const getRedirect = getRedirecter([
+    { from: "/blackfriday", to: "/bf" },
+    { from: "/slash/", to: "/s" },
+    { from: "/coll/babies/*", to: "/coll/babies" },
+    { from: "/coll/junior/*", to: "/coll/kids" },
+  ]);
   return async () => {
-    const redirect = await getRedirect(pathname);
-    assertEquals(redirect, redirectTo);
+    const redirect = await getRedirect(
+      makeFetchEvent(pathname),
+      new Response(undefined, { status: 404 }),
+    );
+    assertEquals(redirect?.headers.get("Location"), redirectTo);
   };
 };
 
@@ -54,3 +58,11 @@ Deno.test(
   "Redirect base without",
   redirectMacro("/coll/junior", "/coll/kids"),
 );
+
+Deno.test("returns undefined if response ok", async () => {
+  const result = await getRedirecter([])(
+    {} as unknown as FetchEvent,
+    new Response(),
+  );
+  assertEquals(result, undefined);
+});

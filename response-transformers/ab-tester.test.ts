@@ -3,15 +3,13 @@ import {
   assertMatch,
 } from "https://deno.land/std@0.86.0/testing/asserts.ts";
 import {
-  _addAssetResponse,
   _addExperimentCookies,
   _addExperimentVariations,
   _transformForTesting,
   ExperimentElementHandler,
   Experiment,
-} from "./ab-test-rewriter.ts";
-import type { RequestHandler } from "./handler.ts";
-import "./worker-cloudflare-types.ts";
+} from "./ab-tester.ts";
+import "../worker-cloudflare-types.ts";
 
 Deno.test("ab tester reads and adds experiment cookies", () => {
   const experiments = ["exp-test"];
@@ -37,17 +35,6 @@ Deno.test("ab tester gets experiments not in cookie by random", () => {
   const experimentVariation = results.experiments[0];
   assertEquals(experimentVariation.name, "exp");
   assertMatch(experimentVariation.variation, /^(?:treatment|control)$/);
-});
-
-Deno.test("ab tester adds asset response", async () => {
-  const getAsset: RequestHandler = async () =>
-    new Response(undefined, { statusText: "asset" });
-  const results = await _addAssetResponse(
-    getAsset,
-    new Request("http://localhost"),
-  )({ experiments: [] });
-  assertEquals(results.response?.statusText, "asset");
-  assertEquals(results.experiments, []);
 });
 
 Deno.test("cookie setter works for a single experiment", () => {

@@ -1,7 +1,7 @@
-import { sendToElastic } from "./ab-test-elastic.ts";
-import { getCookies, setCookie, uuid } from "./deps.ts";
-import { RequestHandler } from "./handler.ts";
-import "./worker-cloudflare-types.ts";
+import { sendToElastic } from "./ab-tester-elastic.ts";
+import { getCookies, setCookie, uuid } from "../deps.ts";
+import { ResponseTransformer } from "../handler.ts";
+import "../worker-cloudflare-types.ts";
 
 export type Experiment = {
   name: string;
@@ -78,15 +78,6 @@ export const _addUserCookie = (
 };
 
 /**
- * Get asset response and add to results
- */
-export const _addAssetResponse = (getAsset: RequestHandler, request: Request) =>
-  async (results: PipelineResults): Promise<PipelineResults> => ({
-    ...results,
-    response: await getAsset(request),
-  });
-
-/**
  * Element handler for HTMLRewriter.
  * 
  * Sets the element attribute to the specified variation and
@@ -147,10 +138,11 @@ export const _transformForTesting = (
   htmlRewriter: HTMLRewriter,
   sendExperimentHits: ExperimentHitSender,
   event: FetchEvent,
+  response: Response,
 ) =>
   (results: PipelineResults): PipelineResults => {
     // bail if no experiments, response or user id
-    if (!results.experiments || !results.response || !results.userId) {
+    if (!results.experiments || !results.userId) {
       return results;
     }
 
@@ -175,7 +167,7 @@ export const _transformForTesting = (
 
     return {
       ...results,
-      response: htmlRewriter.transform(results.response),
+      response: htmlRewriter.transform(response),
     };
   };
 
@@ -203,19 +195,22 @@ export const _addExperimentCookies = (
 
 export const rewriteForTesting = (
   experiments: string[],
-  getAsset: RequestHandler,
-  event: FetchEvent,
-): RequestHandler =>
-  (request) =>
+): ResponseTransformer =>
+  (event, response) =>
     Promise.resolve({})
-      // get asset response (remember it can be undefined)
-      .then(_addAssetResponse(getAsset, request))
       // get requested experiment variations, i.e. experiments enabled in cookie
-      .then(_addExperimentVariations(experiments, request))
+      .then(_addExperimentVariations(experiments, event.request))
       // get the user id from request
-      .then(_addUserId(request))
+      .then(_addUserId(event.request))
       // transform asset response using htmlrewriter, writing to executedExperiments
-      .then(_transformForTesting(new HTMLRewriter(), sendToElastic, event))
+      .then(
+        _transformForTesting(
+          new HTMLRewriter(),
+          sendToElastic,
+          event,
+          response,
+        ),
+      )
       // add experiment cookies
       .then(_addExperimentCookies)
       // add user id cookie

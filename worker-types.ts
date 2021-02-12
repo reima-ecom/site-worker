@@ -5,7 +5,7 @@ Move this file to its own repo!
 */
 
 declare global {
-  type FetchEventHandler = (event: FetchEvent) => void;
+  type FetchEventListener = (event: FetchEvent) => void;
 
   interface FetchEvent extends Event {
     readonly request: Request;
@@ -15,7 +15,7 @@ declare global {
 
   function addEventListener(
     type: "fetch",
-    callback: FetchEventHandler,
+    callback: FetchEventListener,
   ): void;
 }
 

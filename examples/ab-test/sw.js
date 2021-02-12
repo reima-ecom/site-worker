@@ -1,3 +1,66 @@
+const _getEventHandler = ({ getAsset , responseTransformers  })=>async (event)=>{
+        const assetResponse = await getAsset(event);
+        if (responseTransformers) {
+            for (const responseTransformer of responseTransformers){
+                const newResponse = await responseTransformer(event, assetResponse);
+                if (newResponse) return newResponse;
+            }
+        }
+        return assetResponse;
+    }
+;
+const getEventListener = (options)=>{
+    const handleEvent = _getEventHandler(options);
+    return (event)=>{
+        event.respondWith(handleEvent(event));
+    };
+};
+const getEventListener1 = getEventListener;
+const fetchFromHost = (hostname)=>async ({ request  })=>{
+        const url = new URL(request.url);
+        url.hostname = hostname;
+        const lastPathSegment = url.pathname.split("/").pop();
+        if (lastPathSegment && !lastPathSegment.includes(".")) url.pathname += "/";
+        return fetch(url.toString());
+    }
+;
+const _getRedirectGetter = (redirectsArray)=>async (path)=>{
+        const redirect = redirectsArray.find((r)=>r.from === path
+        );
+        if (!redirect) return undefined;
+        return {
+            toPath: redirect.to,
+            statusCode: redirect.code
+        };
+    }
+;
+const _getWildcardRedirectFinder = (getRedirect)=>{
+    const findRedirect = async (pathWithoutSlash)=>await getRedirect(`${pathWithoutSlash}/*`) || await getRedirect(`${pathWithoutSlash}/`) || (pathWithoutSlash ? getRedirect(`${pathWithoutSlash}`) : undefined)
+    ;
+    return async (pathname)=>{
+        const pathSegments = pathname.split("/");
+        if (!pathSegments[pathSegments.length - 1]) pathSegments.pop();
+        do {
+            const redirect = await findRedirect(pathSegments.join("/"));
+            if (redirect) return redirect;
+        }while (pathSegments.pop())
+        return undefined;
+    };
+};
+const _toResponse = (request)=>(redirect)=>redirect ? new Response("Redirecting...", {
+            status: redirect.statusCode || 301,
+            headers: {
+                "Location": redirect.toPath + new URL(request.url).search
+            }
+        }) : undefined
+;
+const _getPathname = (request)=>new URL(request.url).pathname
+;
+const getRedirecter = (redirects)=>{
+    const getRedirect = _getWildcardRedirectFinder(_getRedirectGetter(redirects));
+    return ({ request  })=>Promise.resolve(request).then(_getPathname).then(getRedirect).then(_toResponse(request))
+    ;
+};
 const toElasticBulk = (userId, experiments)=>experiments.filter((exp)=>exp.executed
     ).map((exp)=>({
             userId: userId,
@@ -1310,11 +1373,6 @@ const _addUserCookie = (results)=>{
     });
     return results;
 };
-const _addAssetResponse = (getAsset, request)=>async (results)=>({
-            ...results,
-            response: await getAsset(request)
-        })
-;
 class ExperimentElementHandler {
     constructor(experiment){
         this.experiment = experiment;
@@ -1335,8 +1393,8 @@ class ExperimentDocumentHandler {
         this.event.waitUntil(this.sendExperimentHits(this.userId, this.experiments));
     }
 }
-const _transformForTesting = (htmlRewriter, sendExperimentHits1, event1)=>(results)=>{
-        if (!results.experiments || !results.response || !results.userId) {
+const _transformForTesting = (htmlRewriter, sendExperimentHits1, event1, response)=>(results)=>{
+        if (!results.experiments || !results.userId) {
             return results;
         }
         for (const experiment1 of results.experiments){
@@ -1345,7 +1403,7 @@ const _transformForTesting = (htmlRewriter, sendExperimentHits1, event1)=>(resul
         htmlRewriter.onDocument(new ExperimentDocumentHandler(results.userId, results.experiments, sendExperimentHits1, event1));
         return {
             ...results,
-            response: htmlRewriter.transform(results.response)
+            response: htmlRewriter.transform(response)
         };
     }
 ;
@@ -1363,114 +1421,30 @@ const _addExperimentCookies = (results)=>{
     }
     return results;
 };
-const rewriteForTesting = (experiments1, getAsset, event1)=>(request)=>Promise.resolve({
-        }).then(_addAssetResponse(getAsset, request)).then(_addExperimentVariations(experiments1, request)).then(_addUserId(request)).then(_transformForTesting(new HTMLRewriter(), sendToElastic, event1)).then(_addExperimentCookies).then(_addUserCookie).then(({ response  })=>response
+const rewriteForTesting = (experiments1)=>(event1, response)=>Promise.resolve({
+        }).then(_addExperimentVariations(experiments1, event1.request)).then(_addUserId(event1.request)).then(_transformForTesting(new HTMLRewriter(), sendToElastic, event1, response)).then(_addExperimentCookies).then(_addUserCookie).then(({ response: response1  })=>response1
         )
 ;
 const rewriteForTesting1 = rewriteForTesting;
-const _hasTrailingSlashAndNotRoot = (url)=>{
-    return new URL(url).pathname.substring(1).endsWith("/");
-};
-const _passthroughIfTrailingSlash = async (getAsset, request)=>{
-    if (_hasTrailingSlashAndNotRoot(request.url)) {
-        return undefined;
-    }
-    return getAsset(request);
-};
-const _redirectIfTrailingSlash = async (request)=>{
-    if (_hasTrailingSlashAndNotRoot(request.url)) {
-        const url = new URL(request.url);
-        return new Response("This site does not use trailing slashes for directories", {
-            status: 301,
-            headers: {
-                "Location": url.pathname.slice(0, -1) + url.search
-            }
-        });
-    }
-};
-const _changeRequestUrlPath = (urlPath)=>(request)=>{
-        const url = new URL(request.url);
-        url.pathname = urlPath;
-        return new Request(url.toString());
-    }
-;
-const _getEventHandler = ({ getAsset , getRedirect , stripTrailingSlash  })=>async ({ request  })=>await (stripTrailingSlash ? _passthroughIfTrailingSlash(getAsset, request) : getAsset(request)) || (getRedirect ? await getRedirect(request) : undefined) || (stripTrailingSlash ? await _redirectIfTrailingSlash(request) : undefined) || await Promise.resolve(request).then(_changeRequestUrlPath("/404.html")).then(getAsset) || new Response("Not found", {
-            status: 404
-        })
-;
-const getEventListener = (optionsInput)=>(event1)=>{
-        const options = {
-            ...optionsInput
-        };
-        if (optionsInput.enableExperiments) {
-            options.getAsset = rewriteForTesting1(optionsInput.enableExperiments, optionsInput.getAsset, event1);
-        }
-        const handleEvent = _getEventHandler(options);
-        event1.respondWith(handleEvent(event1));
-    }
-;
-const getEventListener1 = getEventListener;
-const fetchFromHost = (hostname)=>async (request)=>{
-        const url = new URL(request.url);
-        url.hostname = hostname;
-        const lastPathSegment = url.pathname.split("/").pop();
-        if (lastPathSegment && !lastPathSegment.includes(".")) url.pathname += "/";
-        const response = await fetch(url.toString());
-        if (response.ok) return response;
-    }
-;
-const _getRedirectGetter = (redirectsArray)=>async (path)=>{
-        const redirect = redirectsArray.find((r)=>r.from === path
-        );
-        if (!redirect) return undefined;
-        return {
-            toPath: redirect.to,
-            statusCode: redirect.code
-        };
-    }
-;
-const _getWildcardRedirectFinder = (getRedirect)=>{
-    const findRedirect = async (pathWithoutSlash)=>await getRedirect(`${pathWithoutSlash}/*`) || await getRedirect(`${pathWithoutSlash}/`) || (pathWithoutSlash ? getRedirect(`${pathWithoutSlash}`) : undefined)
-    ;
-    return async (pathname)=>{
-        const pathSegments = pathname.split("/");
-        if (!pathSegments[pathSegments.length - 1]) pathSegments.pop();
-        do {
-            const redirect = await findRedirect(pathSegments.join("/"));
-            if (redirect) return redirect;
-        }while (pathSegments.pop())
-        return undefined;
-    };
-};
-const _toResponse = (request)=>(redirect)=>redirect ? new Response("Redirecting...", {
-            status: redirect.statusCode || 301,
-            headers: {
-                "Location": redirect.toPath + new URL(request.url).search
-            }
-        }) : undefined
-;
-const _getPathname = (request)=>new URL(request.url).pathname
-;
-const getRedirecter = (redirects)=>{
-    const getRedirect = _getWildcardRedirectFinder(_getRedirectGetter(redirects));
-    return (request)=>Promise.resolve(request).then(_getPathname).then(getRedirect).then(_toResponse(request))
-    ;
-};
-const eventListener = getEventListener1({
-    getAsset: async (request)=>{
-        if (request.url.endsWith("/not-found")) return undefined;
-        if (request.url.endsWith("/404.html")) {
-            return new Response("This is a not found page");
-        }
+const getAsset = async ({ request  })=>{
+    if (new URL(request.url).pathname === "/") {
         return new Response("<p exp-test>This should be tested</p>", {
             headers: {
                 "Content-Type": "text/html"
             }
         });
-    },
-    enableExperiments: [
-        "exp-test",
-        "exp-not-found"
+    }
+    return new Response("This is a not found page", {
+        status: 404
+    });
+};
+const eventListener = getEventListener1({
+    getAsset: getAsset,
+    responseTransformers: [
+        rewriteForTesting1([
+            "exp-test",
+            "exp-not-found"
+        ]), 
     ]
 });
 addEventListener("fetch", eventListener);
