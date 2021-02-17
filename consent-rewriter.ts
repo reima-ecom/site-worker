@@ -11,7 +11,8 @@ export class DisableAnalyticsHandler {
   element(element: Element) {
     if (element.hasAttribute("src")) {
       element.setAttribute("load-on-consent", element.getAttribute("src")!);
-    } else if (element.tagName === "SCRIPT") {
+      element.removeAttribute("src");
+    } else if (element.tagName === "script") {
       element.setAttribute("type", "text/plain");
     }
   }
