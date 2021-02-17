@@ -1,3 +1,4 @@
+import { ConsentRewriter, rewriteForConsent } from "./consent-rewriter.ts";
 import "./worker-types.ts";
 
 export type FetchEventHandler = (
@@ -16,11 +17,19 @@ type EventHandlerOptions = {
 
 export const _getEventHandler: (
   opts: EventHandlerOptions,
+  consentRewriter?: ConsentRewriter,
 ) => FetchEventHandler = (
   { getAsset, responseTransformers },
+  consentRewriter,
 ) =>
   async (event) => {
-    const assetResponse = await getAsset(event);
+    let assetResponse = await getAsset(event);
+    if (consentRewriter) {
+      assetResponse = consentRewriter(
+        event,
+        assetResponse,
+      );
+    }
     if (responseTransformers) {
       for (const responseTransformer of responseTransformers) {
         const newResponse = await responseTransformer(event, assetResponse);
@@ -33,7 +42,7 @@ export const _getEventHandler: (
 export const getEventListener: (
   opts: EventHandlerOptions,
 ) => FetchEventListener = (options) => {
-  const handleEvent = _getEventHandler(options);
+  const handleEvent = _getEventHandler(options, rewriteForConsent);
   return (event) => {
     event.respondWith(handleEvent(event));
   };

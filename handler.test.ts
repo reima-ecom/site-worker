@@ -13,3 +13,11 @@ Deno.test("Returns response from asset getter", async () => {
   const resp = await handleEvent(makeFetchEvent());
   assertEquals(await resp.text(), "moikka");
 });
+
+Deno.test("Runs consent rewriter", async () => {
+  const handleEvent = _getEventHandler({
+    getAsset: async () => new Response("moikka"),
+  }, () => new Response("consent"));
+  const resp = await handleEvent(makeFetchEvent());
+  assertEquals(await resp.text(), "consent");
+});
