@@ -1,3 +1,4 @@
+import "./worker-types.ts";
 import "./worker-cloudflare-types.ts";
 import { setCookie } from "./deps.ts";
 
@@ -7,11 +8,19 @@ export type ConsentRewriter = (
 ) => Response;
 
 export class DisableAnalyticsHandler {
-  element(element: Element) {}
+  element(element: Element) {
+    if (element.hasAttribute("src")) {
+      element.setAttribute("load-on-consent", element.getAttribute("src")!);
+    } else if (element.tagName === "SCRIPT") {
+      element.setAttribute("type", "text/plain");
+    }
+  }
 }
 
 export class ShowBannerHandler {
-  element(element: Element) {}
+  element(element: Element) {
+    element.setAttribute("show", "");
+  }
 }
 
 const europeanUnionCountries = [
@@ -96,12 +105,21 @@ export const _rewriteForConsent: (
       event.request.cf.regionCode === "CA" ||
       californiaPops.includes(event.request.cf.colo)
     ) {
-      setCookie(response, {
-        name: "CCPA-Notice",
-        value: "given",
-        path: "/",
-        maxAge: 2_629_746, // one month
-      });
+      // if no ccpa-notice cookie, set that and show banner
+      const noticeGiven = event.request.headers.get("Cookie")?.includes(
+        "CCPA-Notice",
+      );
+      if (!noticeGiven) {
+        setCookie(response, {
+          name: "CCPA-Notice",
+          value: "given",
+          path: "/",
+          maxAge: 2_629_746, // one month
+        });
+        return new htmlRewriter()
+          .on("[ccpa]", new ShowBannerHandler())
+          .transform(response);
+      }
     }
     return response;
   };

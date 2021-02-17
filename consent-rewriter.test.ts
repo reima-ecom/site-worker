@@ -89,13 +89,23 @@ Deno.test("consent rewriter disables analytics if consent rejected in qry string
   assertEquals(htmlRewriter.onCalls, ["[uses-cookies]"]);
 });
 
-Deno.test("consent rewriter just sets cookie for california", () => {
+Deno.test("consent rewriter shows banner and sets cookie for california", () => {
   const response = new Response();
   const htmlRewriter = getMockHTMLRewriter();
   _rewriteForConsent(htmlRewriter.Rewriter)(
     makeFetchEvent({ colo: "LAX" }),
     response,
   );
-  assertEquals(htmlRewriter.onCalls, []);
+  assertEquals(htmlRewriter.onCalls, ["[ccpa]"]);
   assertMatch(response.headers.get("Set-Cookie") || "", /CCPA-Notice=given/);
+});
+
+Deno.test("consent rewriter doesn't rewrite for california when notice given", () => {
+  const response = new Response();
+  const htmlRewriter = getMockHTMLRewriter();
+  _rewriteForConsent(htmlRewriter.Rewriter)(
+    makeFetchEvent({ colo: "LAX" }, "/", "CCPA-Notice=given"),
+    response,
+  );
+  assertEquals(htmlRewriter.onCalls, []);
 });
