@@ -124,6 +124,54 @@ export const _rewriteForConsent: (
     return response;
   };
 
+/**
+ * Will rewrite the response to show consent/privacy banners and
+ * possibly disable analytics. Currently supported consent mechanisms
+ * are GDPR and CCPA.
+ * 
+ * The banners to show should be hidden by default and shown via CSS when
+ * the `show` attribute is present on the banner element.
+ * 
+ * **GDPR** handling if the request comes from an EU country
+ * 
+ * The consent answer is stored in a cookie named `GDPR-Consent`. This cookie
+ * should take on the value of either "yes" or "no".
+ * 
+ * - If no consent answer given yet, add a `show` attribute to elements that 
+ * have a `gdpr` attribute (i.e. show GDPR banner).
+ * - If no answer is given or consent is rejected, disable analytics scripts
+ * (see below).
+ * - If the url has the `gdpr-consent` query string parameter, set the consent
+ * cookie to that value. (E.g. `/pages/a-page?gdpr-consent=no`.) So in order
+ * to hide the banner and persist the answer in the cookie, just link to 
+ * `?gdpr-consent=yes` for the "accept" button (or do it client-side).
+ * 
+ * **CCPA** handling if the request comes from California
+ * 
+ * If this is the first visit, add a `show` attribute to elements that have
+ * a `ccpa` attribute. Also, set the `CCPA-Notice` cookie to `given`. The
+ * presence of this cookie is how we determine a "first visit". So in order
+ * to hide the banner, just reload the page (or do it client-side).
+ * 
+ * **Disabling analytics scripts** 
+ * 
+ * Disabling analytics scripts (that use PII in cookies) works by finding 
+ * and modifying elements that have a `uses-cookies` attribute. These elements
+ * are modified as follows:
+ * 
+ * - If the element has a `src` attribute, change that attribute name to
+ * `load-on-consent` in order not to load it. This works equally well for
+ * scripts and img pixels, of course.
+ * - If the element is a `script` and has no `src`, it must be an inline script.
+ * In this case set the `type` attribute to `text/plain` in order not to
+ * execute it as JS.
+ * 
+ * Both of the above can be leveraged on the client. When the user gives consent
+ * you can load scripts by changing the attributes back to what they were.
+ * If you get the consent answer on the client side, remember to set the
+ * appropriate cookie (e.g. `GDPR-Consent) in the client code in order to
+ * persist the answer.
+ */
 export const rewriteForConsent: ConsentRewriter = (event, response) => {
   return _rewriteForConsent(HTMLRewriter)(event, response);
 };
