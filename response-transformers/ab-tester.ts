@@ -14,6 +14,7 @@ export type Experiments = Experiment[];
 type PipelineResults = {
   experiments?: Experiments;
   userId?: string;
+  /** New response, i.e. mutable headers */
   response?: Response;
 };
 

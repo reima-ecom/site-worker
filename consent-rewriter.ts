@@ -4,7 +4,7 @@ import { setCookie } from "./deps.ts";
 
 export type ConsentRewriter = (
   event: FetchEvent,
-  response: Response,
+  response: ImmutableResponse,
 ) => Response;
 
 export class DisableAnalyticsHandler {
@@ -62,19 +62,35 @@ const californiaPops = [
   "SJC",
 ];
 
+/**
+ * Response that should be considered immutable. This means that
+ * e.g. `headers` will be immutable.
+ * 
+ * To modify the response, create a new one based on this one. This
+ * is needed for instance when you want to set a cookie! Like this:
+ * 
+ * ```ts
+ * response = new Response(response.body, response);
+ * ```
+ */
+type ImmutableResponse = Response;
+
 export const _rewriteForConsent: (
   HtmlRewriterClass: typeof HTMLRewriter,
 ) => ConsentRewriter = (htmlRewriter) =>
-  (event, response) => {
+  (event, response: ImmutableResponse) => {
     if (
       // check for european union
       europeanUnionCountries.includes(event.request.cf.country)
     ) {
-      // if query string, get value and set response headers
+      // get consent value from query string
       let gdprConsent = new URL(event.request.url).searchParams.get(
         "gdpr-consent",
       );
+      // set cookie if consent in query string
       if (gdprConsent) {
+        // create a new response here to make headers (set-cookie) mutable
+        response = new Response(response.body, response);
         setCookie(response, {
           name: "GDPR-Consent",
           value: gdprConsent,
@@ -111,15 +127,18 @@ export const _rewriteForConsent: (
         "CCPA-Notice",
       );
       if (!noticeGiven) {
-        setCookie(response, {
+        // first get the new rewritten response in order to have
+        // mutable headers for cookie setting
+        const ccpaBannerEnabledResponse = new htmlRewriter()
+          .on("[ccpa]", new ShowBannerHandler())
+          .transform(response);
+        setCookie(ccpaBannerEnabledResponse, {
           name: "CCPA-Notice",
           value: "given",
           path: "/",
           maxAge: 2_629_746, // one month
         });
-        return new htmlRewriter()
-          .on("[ccpa]", new ShowBannerHandler())
-          .transform(response);
+        return ccpaBannerEnabledResponse;
       }
     }
     return response;
