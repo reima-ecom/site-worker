@@ -23,20 +23,29 @@ export const _getEventHandler: (
   consentRewriter,
 ) =>
   async (event) => {
+    // if this call throws, we don't have an asset to return
+    // anyway, so just let it fail in that case
     let assetResponse = await getAsset(event);
-    if (consentRewriter) {
-      assetResponse = consentRewriter(
-        event,
-        assetResponse,
-      );
-    }
-    if (responseTransformers) {
-      for (const responseTransformer of responseTransformers) {
-        const newResponse = await responseTransformer(event, assetResponse);
-        if (newResponse) return newResponse;
+    try {
+      if (consentRewriter) {
+        assetResponse = consentRewriter(
+          event,
+          assetResponse,
+        );
       }
+      if (responseTransformers) {
+        for (const responseTransformer of responseTransformers) {
+          const newResponse = await responseTransformer(event, assetResponse);
+          if (newResponse) return newResponse;
+        }
+      }
+      return assetResponse;
+    } catch (error) {
+      // set error header
+      assetResponse = new Response(assetResponse.body, assetResponse);
+      assetResponse.headers.append("Worker-Error", error.toString());
+      return assetResponse;
     }
-    return assetResponse;
   };
 
 export const getEventListener: (
