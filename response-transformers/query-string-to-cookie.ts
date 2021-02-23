@@ -12,13 +12,17 @@ export const queryStringToCookie = (
   getAsset: FetchEventHandler,
 ): FetchEventHandler =>
   async (event) => {
-    const response = await getAsset(event);
+    let response = await getAsset(event);
     const url = new URL(event.request.url);
     if (url.searchParams.has(queryStringParameter)) {
+      // create a new response to get mutable headers
+      response = new Response(response.body, response);
       // max-age 30 days
       response.headers.append(
-        'Set-Cookie',
-        `${cookieName}=${url.searchParams.get(queryStringParameter)}; Path=/; Max-Age=2592000; SameSite=Lax;`
+        "Set-Cookie",
+        `${cookieName}=${
+          url.searchParams.get(queryStringParameter)
+        }; Path=/; Max-Age=2592000; SameSite=Lax;`,
       );
     }
     return response;
