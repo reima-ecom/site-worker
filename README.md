@@ -97,3 +97,13 @@ const eventListener = getEventListener({
 ```
 
 See the examples for more details.
+
+### Query string to cookie
+
+You can store the value of a query string parameter with the `queryStringToCookie` helper. In order to set the value of the `a8` query string (search) parameter as the `X-A8` cookie, do the following:
+
+```ts
+const eventListener = getEventListener({
+  getAsset: queryStringToCookie('a8', 'X-A8', getAsset),
+});
+```

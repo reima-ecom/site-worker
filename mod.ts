@@ -6,4 +6,5 @@ export {
   notFound404WhenTrailingSlash,
   redirectIfTrailingSlash,
 } from "./response-transformers/trailing-slash-remover.ts";
+export { queryStringToCookie } from "./response-transformers/query-string-to-cookie.ts";
 export type { Redirect } from "./response-transformers/redirecter.ts";
