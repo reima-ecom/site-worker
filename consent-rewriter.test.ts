@@ -1,3 +1,4 @@
+import "./worker-cloudflare-types.ts";
 import {
   assertEquals,
   assertMatch,
@@ -22,7 +23,9 @@ const getMockHTMLRewriter = () => {
       onCalls.push(selector);
       return this;
     }
-    transform() {}
+    transform(res: Response) {
+      return res;
+    }
   }
   return {
     onCalls,
