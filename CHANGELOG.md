@@ -1,5 +1,12 @@
 # Changelog
 
+### [0.4.1](https://www.github.com/reima-ecom/site-worker/compare/v0.4.0...v0.4.1) (2021-02-25)
+
+
+### Bug Fixes
+
+* Add trailing slash fetcher to mod ([4e79e71](https://www.github.com/reima-ecom/site-worker/commit/4e79e71293076f3d2a3fc2cb75e52e9595c7675c))
+
 ## [0.4.0](https://www.github.com/reima-ecom/site-worker/compare/v0.3.1...v0.4.0) (2021-02-25)
 
 
