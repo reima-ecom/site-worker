@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://www.github.com/reima-ecom/site-worker/compare/v0.3.1...v0.4.0) (2021-02-25)
+
+
+### Features
+
+* Add origin fetcher that adds a trailing slash if dir ([8b82255](https://www.github.com/reima-ecom/site-worker/commit/8b8225588b9702a44302b5ea5a21c15126d5c283))
+
 ### [0.3.1](https://www.github.com/reima-ecom/site-worker/compare/v0.3.0...v0.3.1) (2021-02-23)
 
 
