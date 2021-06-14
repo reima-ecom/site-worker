@@ -52,11 +52,11 @@ Deno.test("consent rewriter disables cookies and shows banner when finland", () 
 });
 
 Deno.test("consent rewriter sets cookie when `?gdpr-consent=` query string in finland", () => {
-  const response = new Response();
+  const originResponse = new Response();
   const htmlRewriter = getMockHTMLRewriter();
-  _rewriteForConsent(htmlRewriter.Rewriter)(
+  const response = _rewriteForConsent(htmlRewriter.Rewriter)(
     makeFetchEvent({ country: "FI" }, "/?gdpr-consent=yes"),
-    response,
+    originResponse,
   );
   assertEquals(htmlRewriter.onCalls, []);
   assertMatch(response.headers.get("Set-Cookie") || "", /GDPR-Consent=yes/);
