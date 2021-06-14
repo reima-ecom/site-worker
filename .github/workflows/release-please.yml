@@ -12,6 +12,8 @@ jobs:
         with:
             deno-version: v1.x
       - run: deno test
+      - name: Check mod file
+        run: deno run mod.ts
       - uses: GoogleCloudPlatform/release-please-action@v2
         with:
           release-type: simple
