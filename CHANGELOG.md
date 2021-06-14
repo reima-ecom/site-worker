@@ -1,5 +1,12 @@
 # Changelog
 
+### [0.5.1](https://www.github.com/reima-ecom/site-worker/compare/v0.5.0...v0.5.1) (2021-06-14)
+
+
+### Bug Fixes
+
+* Remove deleted ab tester from mod ([7d16b22](https://www.github.com/reima-ecom/site-worker/commit/7d16b225a42084e3c49cea199b780790e28bbd69))
+
 ## [0.5.0](https://www.github.com/reima-ecom/site-worker/compare/v0.4.1...v0.5.0) (2021-06-14)
 
 
