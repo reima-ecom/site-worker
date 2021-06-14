@@ -1,5 +1,12 @@
 # Changelog
 
+### [0.5.2](https://www.github.com/reima-ecom/site-worker/compare/v0.5.1...v0.5.2) (2021-06-14)
+
+
+### Bug Fixes
+
+* Add country redirecter to mod ([fd43798](https://www.github.com/reima-ecom/site-worker/commit/fd43798b680cd449486f816e54b0895dbc36e3da))
+
 ### [0.5.1](https://www.github.com/reima-ecom/site-worker/compare/v0.5.0...v0.5.1) (2021-06-14)
 
 
