@@ -7,6 +7,10 @@ jobs:
   release-please:
     runs-on: ubuntu-latest
     steps:
+      - uses: denoland/setup-deno@v1
+        with:
+            deno-version: v1.x
+      - run: deno test
       - uses: GoogleCloudPlatform/release-please-action@v2
         with:
           release-type: simple
